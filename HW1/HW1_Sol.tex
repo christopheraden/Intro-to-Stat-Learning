@@ -103,7 +103,7 @@ hist(simErrors[,2], main='Histogram of Testing Risk', xlab='Testing Risk')
 abline(v = mean(simErrors[,2]), col='red', lwd=4)
 abline(v = 1, col='blue', lwd=4)
 \end{lstlisting}
-\begin{figure}[H]
+\begin{figure}[H] \center
 \includegraphics[scale=.4]{RiskHist.jpeg}
 \end{figure}
 \end{enumerate}
@@ -114,9 +114,25 @@ abline(v = 1, col='blue', lwd=4)
 \item 
 \end{enumerate}
 
+\begin{lstlisting}
+\end{lstlisting}
+
 \section*{Problem 3}
 \begin{enumerate}[(a)]
-\item A possible rule would be to classify observations to $Y=1$ if $P(Y=1) = \text{sigmoid}(\hat{\beta}^T X) \geq 0.5$. This is equivalent to classifying to $Y=1$ if $\hat{\beta}^T X \geq 0$. Using our logistic regression, classify to $Y=1$ if $0.127 + 0.063 \cdot x_1 + 1.390 \cdot x_2 \geq 0$. The confusion matrix:
+\item A possible rule would be to classify observations to $Y=1$ if $P(Y=1) = \text{sigmoid}(\hat{\beta}^T X) \geq 0.5$. This is equivalent to classifying to $Y=1$ if $\hat{\beta}^T X \geq 0$. 
+\begin{lstlisting}
+load("hw1prob3.Rdata")
+logisticY1 = glm(y1~x, family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifier')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+coef(logisticY1) #Classification Rule: b'X >= 0, classify to Y=1.
+
+truePred = cbind(y1, logisticY1$fitted.values >= 0.5) #Obs Y1 and Pred Y1
+table(Actual=truePred[,1], Predicted=truePred[,2])
+(101+87)/length(y1)
+\end{lstlisting}
+Using our logistic regression, classify to $Y=1$ if $0.127 + 0.063 \cdot x_1 + 1.390 \cdot x_2 \geq 0$. The confusion matrix:
 \begin{table}[H] \center
 \begin{tabular}{ccc} \hline
 & Predict 0 & Predict 1 \\ \hline
@@ -125,20 +141,96 @@ Actual 1 & 101 & 304 \\ \hline
 \end{tabular}
 \end{table}
 The misclassification rate is $ (101+87) / 800 = .235$.
-\begin{figure}[H]
+\begin{figure}[H] \center
 \includegraphics[scale=.4]{y1_plot.jpeg}
 \end{figure}
 
-\item Classification rule drawn on the plot, corresponds to the line $x_2 = -0.063 x_1 / 1.390  - 0.127 / 1.390$. This is obtained by taking the classification rule and converting it to slope-intercept form.
-\begin{figure}[H]
+\item Classification rule drawn on the plot, corresponds to the line 
+$$x_2 = -0.063 x_1 / 1.390  - 0.127 / 1.390.$$ 
+This is obtained by taking the classification rule and converting it to slope-intercept form.
+\begin{lstlisting}
+plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifier')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+
+logistCVSlope = -coef(logisticY1)[2] / coef(logisticY1)[3]
+logisticCVInt = -coef(logisticY1)[1] / coef(logisticY1)[3]
+abline(a = logisticCVInt, b = logistCVSlope, col='black', lty=1, lwd=3)
+\end{lstlisting}
+\begin{figure}[H] \center
 \includegraphics[scale=.4]{y1_plot2.jpeg}
 \end{figure}
-
+The classifier is clearly nonlinear (it looks like it could be quadratic or periodic with a restricted support), and yet we fit a linear rule to the data set. Not smart!
+\item Similar to the plotting method described in (b), convert general form to slope-intercept form. 
+\begin{lstlisting}
+logisticY1.X1Square = glm(y1~x + I(x[,1]^2), family='binomial')
+truePred = cbind(y1, logisticY1.X1Square$fitted.values >= 0.5)
+table(Actual=truePred[,1], Predicted=truePred[,2])
+\end{lstlisting}
+We arrive at the conclusion that we classify to $Y=1$ if $-2322.5 -11.6 x_1 + 1955.6 x_2 + 1937.1 x_1^2 \geq 0$.
+\begin{table}[H] \center
+\begin{tabular}{ccc} \hline
+& Predict 0 & Predict 1 \\ \hline
+Actual 0 & 395 & 0 \\ 
+Actual 1 & 0 & 405 \\ \hline
+\end{tabular}
+\end{table}
+There is a perfect classification rate (0\% misclassification rate). This is definitely a better classifier, not just based on the classification rate, but it is clear that this classifier much more faithfully captures the relationship of  $y_1$ on $(x_1, x_2)$.
 \item 
-\item 
-\item 
-\item 
-\item 
+\begin{lstlisting}
+plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifier')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY1.X1Square)[1] / coef(logisticY1.X1Square)[3]
+b = -coef(logisticY1.X1Square)[2] / coef(logisticY1.X1Square)[3]
+c = -coef(logisticY1.X1Square)[4] / coef(logisticY1.X1Square)[3]
+curve(a + b*x + c*x^2, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3)
+\end{lstlisting}
+\begin{figure}[H] \center
+\includegraphics[scale=.4]{y1_plot3.jpeg}
+\end{figure}
+The classifier has a quadratic shape in $x_1$.
+\item What happens when we look at $y_2$ instead of $y_1$?
+\begin{lstlisting}
+logisticY2 = glm(y2~x, family='binomial')
+logisticY2.X1Square = glm(y2~x + I(x[,1]^2), family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y2+1], pch = c('o', '+')[y2+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifiers with y2')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY2)[1] / coef(logisticY2)[3]
+b = -coef(logisticY2)[2] / coef(logisticY2)[3]
+abline(a = logisticCVInt, b = logistCVSlope, col='black', lty=1, lwd=3)
+a = -coef(logisticY2.X1Square)[1] / coef(logisticY2.X1Square)[3]
+b = -coef(logisticY2.X1Square)[2] / coef(logisticY2.X1Square)[3]
+c = -coef(logisticY2.X1Square)[4] / coef(logisticY2.X1Square)[3]
+curve(a + b*x + c*x^2, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3, col='orange')
+truePredLinear = cbind(y2, logisticY2$fitted.values >= 0.5)
+mean(truePredLinear[,1] != truePredLinear[,2])
+truePredQuadratic = cbind(y2, logisticY2.X1Square$fitted.values >= 0.5)
+mean(truePredQuadratic[,1] != truePredQuadratic[,2])
+\end{lstlisting}
+\begin{figure}[H] \center
+\includegraphics[scale=.4]{y2_plot1.jpeg}
+\end{figure}
+The linear rule has a misclassification rate of 18.5\% while the quadratic rule has a misclassification of 13.75\%. 
+\item Neither rule is particularly good, because neither captures the underlying structure of the data, which appears to be higher degree than just quadratic. One approach we can do is to fit a cubic (third-order) term, which is what the relationship seems to be. If we try third-order, and classify $Y_2 = 1$ if 
+$$-1455 -1541 x_1 - 1521 x_2 + 1537 x_1^2 + 1537 x_1^3 \geq 0,$$ we can achieve perfect classification.
+\begin{lstlisting}
+logisticY2.X1Third = glm(y2~x + I(x[,1]^2) + I(x[,1]^3), family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y2+1], pch = c('o', '+')[y2+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifiers with y2')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY2.X1Third)[1] / coef(logisticY2.X1Third)[3]
+b = -coef(logisticY2.X1Third)[2] / coef(logisticY2.X1Third)[3]
+c = -coef(logisticY2.X1Third)[4] / coef(logisticY2.X1Third)[3]
+d = -coef(logisticY2.X1Third)[5] / coef(logisticY2.X1Third)[3]
+curve(a + b*x + c*x^2 + d*x^3, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3, col='purple')
+truePredCubic = cbind(y2, logisticY2.X1Third$fitted.values >= 0.5)
+mean(truePredCubic[,1] != truePredCubic[,2])
+\end{lstlisting}
+\begin{figure}[H] \center
+\includegraphics[scale=.4]{y2_plot2.jpeg}
+\end{figure}
+\item Why not keep adding more and more polynomial terms? We have seen before that we run the risk of over-fitting by adding more and more terms. That is, we begin to fine-tune a model that performs well in the sample we have, but may not generalize well to data we haven't collected yet. There are a few approaches to dealing with this over-fitting problem. We've already encountered a few in this course, as well as in previous courses. One popular way is to use cross-validation, fitting several candidate models on one set of data (the training set) and validating the model's performance on a set of data that was not used in training (the testing set), and choosing the model that performs best on the test set. Other ways would involve striking some balance between classification accuracy and the size of the model. These include AIC, BIC, Mallow's $C_p$, and many more.
 \end{enumerate}
-
 \end{document} 

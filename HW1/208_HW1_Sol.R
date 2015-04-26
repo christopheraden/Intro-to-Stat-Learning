@@ -46,15 +46,13 @@ abline(v = mean(simErrors[,2]), col='red', lwd=4)
 abline(v = 1, col='blue', lwd=4)
 
 #Problem 3
-load("hw1prob3.Rdata")
 #a 
+load("hw1prob3.Rdata")
 logisticY1 = glm(y1~x, family='binomial')
 plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
      ylab="X2", xlab="X1", main='Logistic Regression Classifier')
 legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
-
-#Classification Rule: XB >= 0, classify to Y=1.
-logisticY1$coefficients
+coef(logisticY1) #Classification Rule: b'X >= 0, classify to Y=1.
 
 truePred = cbind(y1, logisticY1$fitted.values >= 0.5) #Obs Y1 and Pred Y1
 table(Actual=truePred[,1], Predicted=truePred[,2])
@@ -64,4 +62,52 @@ table(Actual=truePred[,1], Predicted=truePred[,2])
 plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
      ylab="X2", xlab="X1", main='Logistic Regression Classifier')
 legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY1)[1] / coef(logisticY1)[3]
+b = -coef(logisticY1)[2] / coef(logisticY1)[3]
+abline(a, b, col='black', lty=1, lwd=3)
+
+#c, d
+logisticY1.X1Square = glm(y1~x + I(x[,1]^2), family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y1+1], pch = c('o', '+')[y1+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifier')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY1.X1Square)[1] / coef(logisticY1.X1Square)[3]
+b = -coef(logisticY1.X1Square)[2] / coef(logisticY1.X1Square)[3]
+c = -coef(logisticY1.X1Square)[4] / coef(logisticY1.X1Square)[3]
+curve(a + b*x + c*x^2, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3)
+truePred = cbind(y1, logisticY1.X1Square$fitted.values >= 0.5)
+table(Actual=truePred[,1], Predicted=truePred[,2])
+(0 + 0)/length(y1)
+
+#e
+logisticY2 = glm(y2~x, family='binomial')
+logisticY2.X1Square = glm(y2~x + I(x[,1]^2), family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y2+1], pch = c('o', '+')[y2+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifiers with y2')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY2)[1] / coef(logisticY2)[3]
+b = -coef(logisticY2)[2] / coef(logisticY2)[3]
+abline(a = logisticCVInt, b = logistCVSlope, col='black', lty=1, lwd=3)
+a = -coef(logisticY2.X1Square)[1] / coef(logisticY2.X1Square)[3]
+b = -coef(logisticY2.X1Square)[2] / coef(logisticY2.X1Square)[3]
+c = -coef(logisticY2.X1Square)[4] / coef(logisticY2.X1Square)[3]
+curve(a + b*x + c*x^2, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3, col='orange')
+
+truePredLinear = cbind(y2, logisticY2$fitted.values >= 0.5)
+mean(truePredLinear[,1] != truePredLinear[,2])
+truePredQuadratic = cbind(y2, logisticY2.X1Square$fitted.values >= 0.5)
+mean(truePredQuadratic[,1] != truePredQuadratic[,2])
+
+#f
+logisticY2.X1Third = glm(y2~x + I(x[,1]^2) + I(x[,1]^3), family='binomial')
+plot(x[,1], x[,2], col=c("red","blue")[y2+1], pch = c('o', '+')[y2+1], 
+     ylab="X2", xlab="X1", main='Logistic Regression Classifiers with y2')
+legend('topleft', legend=unique(y1), col=c('blue', 'red'), pch=c('+', 'o'))
+a = -coef(logisticY2.X1Third)[1] / coef(logisticY2.X1Third)[3]
+b = -coef(logisticY2.X1Third)[2] / coef(logisticY2.X1Third)[3]
+c = -coef(logisticY2.X1Third)[4] / coef(logisticY2.X1Third)[3]
+d = -coef(logisticY2.X1Third)[5] / coef(logisticY2.X1Third)[3]
+curve(a + b*x + c*x^2 + d*x^3, from=min(x[,1]), to=max(x[,1]), add = TRUE, lwd=3, col='purple')
+truePredCubic = cbind(y2, logisticY2.X1Third$fitted.values >= 0.5)
+mean(truePredCubic[,1] != truePredCubic[,2])
 
