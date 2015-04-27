@@ -1,6 +1,6 @@
 \documentclass[12pt]{article}
 \usepackage[english]{babel}
-\usepackage{graphicx, amsmath, mathtools, listings, color, caption, rotating, subfigure, fullpage, textcomp, enumerate, float}
+\usepackage{graphicx, amsmath, mathtools, listings, color, caption, rotating, subfigure, fullpage, textcomp, enumerate, float, amssymb}
 
 \newcommand{\iid}{\stackrel{\mathrm{iid}}{\sim}}
 
@@ -27,7 +27,7 @@
 
 \begin{document}
 \begin{center}
-
+Homework 1 Possible Solutions
 \end{center}
 
 \section*{Problem 1}
@@ -110,12 +110,45 @@ abline(v = 1, col='blue', lwd=4)
 
 \section*{Problem 2}
 \begin{enumerate}[(a)]
-\item 
-\item 
+\item We want a confidence interval for $\sum_{j=0}^3 \beta_j x_0^j$. This is accomplished by noting that (at least asymptotically) the OLS estimates are normal, so a linear combination is normal as well. We do not know $\sigma^2$ however, and estimating it, we incur a small penalty. Because we must estimate $\sigma^2$, the linear combination, when suitably standardized, will have a $t_{n-p}$ distribution instead of a normal. The point estimate will be $\hat{f}(x_0) =  x_0 \hat{\beta}$, $\beta \in \mathbb{R}^4$, and where, forgive the abuse of notation, $x_0 = (1, x_0, x_0^2, x_0^3)$. The variance is
+$$ \text{V}(\hat{f}(x_0)) = x_0' \text{V}( \hat{\beta}) ) x_0 = \sigma^2 \cdot x_0' \cdot (X'X)^{-1} \cdot x_0. $$
+Not knowing $\sigma^2$, we use the plug-in estimator, MSE, and argue $\left[ \text{V}(\hat{f}(x_0))\right]^{-1/2} \hat{f}(x_0)$ is t-distributed with $n-p$ degrees of freedom. A confidence interval for $f(x_0)$ is 
+$$\hat{f}(x_0) \pm \sqrt{\text{MSE} \cdot x_0' \cdot (X'X)^{-1} \cdot x_0} \cdot t_{n-p, 1-\alpha/2}.$$
+\item The confidence set method follows by applying the Scheff\'{e} Method, which creates simultaneous intervals for $\beta$, then using this interval to come up with all possible linear combinations for $\sum_{i=0}^3 \beta_j x_0^j$, $\forall x_0$. This interval is 
+$$\hat{f}(x_0) \pm \sqrt{\text{MSE} \cdot x_0' \cdot (X'X)^{-1} \cdot x_0 \cdot \chi_{4, 1-\alpha}^2}.$$
+There was some note about using $p F_{p, n-p, 1-\alpha}$. The $\chi^2$ method is asymptotic. These methods are equivalent for large $n$ and small $p/n$, though the $F$ method is based on non-asymptotic normality where we need to estimate $\sigma^2$, and the $\chi^2$ relies on Central Limit Theorem.
+
+The method in (a) needs only give coverage to the point $\hat{f}(x_0)$, whereas the method in (b) gives proper coverage for any linear combination of the form $\sum_{j=0}^3 \beta_j x_0^j$ we choose. This means we have to be a bit more conservative than if we could make statements about a particular $x_0$.
+\begin{lstlisting}
+income = read.csv("http://www-bcf.usc.edu/~gareth/ISL/Income1.csv")[,-1]
+incomeModel = lm(Income ~ Education + I(Education^2) + I(Education^3), data=income)
+pointwiseCI = predict(incomeModel, interval = "confidence")
+
+multiplier = sqrt(qchisq(.95, 4))
+familywiseCI = predict(incomeModel, se.fit=TRUE)
+scheffeInterval = data.frame(fit = familywiseCI$fit,
+                             lwr = familywiseCI$fit - multiplier * familywiseCI$se.fit,
+                             upr = familywiseCI$fit + multiplier * familywiseCI$se.fit)
+
+plot(Income ~ Education, data=income)
+legend("topleft", c("Fitted Values", "Pointwise CI", "Familywise CI"), 
+       lty = c(1, 2, 4), col = c("red", "blue", "purple")) #Add a legend
+#Plot Pointwise CI
+lines(income$Education, pointwiseCI[,1], col = "red")
+lines(income$Education, pointwiseCI[,2], lty = 2, col = "blue")
+lines(income$Education, pointwiseCI[,3], lty = 2, col = "blue")
+#Plot Scheffe
+lines(income$Education, scheffeInterval[,2], lty = 4, col = "purple")
+lines(income$Education, scheffeInterval[,3], lty = 4, col = "purple")
+\end{lstlisting}
+\begin{figure}[H] \center
+\includegraphics[scale=.6]{Pr2b.jpeg}
+\end{figure}
+
+
 \end{enumerate}
 
-\begin{lstlisting}
-\end{lstlisting}
+
 
 \section*{Problem 3}
 \begin{enumerate}[(a)]

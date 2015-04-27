@@ -45,6 +45,30 @@ hist(simErrors[,2], main='Histogram of Testing Risk', xlab='Testing Risk')
 abline(v = mean(simErrors[,2]), col='red', lwd=4)
 abline(v = 1, col='blue', lwd=4)
 
+
+#Problem 2
+# Part A
+income = read.csv("http://www-bcf.usc.edu/~gareth/ISL/Income1.csv")[,-1]
+incomeModel = lm(Income ~ Education + I(Education^2) + I(Education^3), data=income)
+pointwiseCI = predict(incomeModel, interval = "confidence")
+
+multiplier = sqrt(qchisq(.95, 4))
+familywiseCI = predict(incomeModel, se.fit=TRUE)
+scheffeInterval = data.frame(fit = familywiseCI$fit,
+                             lwr = familywiseCI$fit - multiplier * familywiseCI$se.fit,
+                             upr = familywiseCI$fit + multiplier * familywiseCI$se.fit)
+
+plot(Income ~ Education, data=income)
+legend("topleft", c("Fitted Values", "Pointwise CI", "Familywise CI"), 
+       lty = c(1, 2, 4), col = c("red", "blue", "purple")) #Add a legend
+#Plot Pointwise CI
+lines(income$Education, pointwiseCI[,1], col = "red")
+lines(income$Education, pointwiseCI[,2], lty = 2, col = "blue")
+lines(income$Education, pointwiseCI[,3], lty = 2, col = "blue")
+#Plot Scheffe
+lines(income$Education, scheffeInterval[,2], lty = 4, col = "purple")
+lines(income$Education, scheffeInterval[,3], lty = 4, col = "purple")
+
 #Problem 3
 #a 
 load("hw1prob3.Rdata")
