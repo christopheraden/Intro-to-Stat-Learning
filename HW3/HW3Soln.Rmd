@@ -1,0 +1,248 @@
+---
+title: "Homework 3 Solutions"
+date: "May 20, 2015"
+output: pdf_document
+---
+  
+  \section{Problem 1}
+```{r, warnings=FALSE}
+library(MASS)
+library(classifly)
+load("threes.Rdata")
+```
+
+\subsection{(a)}
+```{r, warnings=FALSE}
+pc = princomp(threes) 
+dirs = pc$loadings
+score1 = pc$scores[ ,1]
+score2 = pc$scores[ ,2]
+plot(score2~score1, xlab = "First Principal Component Score", 
+     ylab = "Second Principal Component Score",
+     main = "First Two Principal Component Scores")
+```
+
+
+\subsection{(b)}
+```{r, warnings=FALSE}
+qScore1 = quantile(score1,  probs = c(.05, .25, .50, .75, .95))
+qScore2 = quantile(score2,  probs = c(.05, .25, .50, .75, .95))
+qScore1
+qScore2
+plot(score2~score1, xlab = "First Principal Component Score", 
+     ylab = "Second Principal Component Score",
+     main = "First Two Principal Component Scores")
+abline(v = qScore1)
+abline(h = qScore2)
+```
+
+
+\subsection{(c)}
+Indeces are listed below the code. Columns indicate first principal component, while rows indicate second principal component.
+```{r, warnings=FALSE}
+# index = replicate(25, identify(score1, score2, n=1))
+load("index.rdata")
+matrix(index, nrow=5, byrow=TRUE)
+```
+
+\subsection{(d)}
+```{r, warnings=FALSE}
+plot.digit = function(x, zlim=c(-1,1)) {
+  cols = gray.colors(100)[100:1]
+  image(matrix(x, nrow=16)[ ,16:1], col=cols,
+        zlim=zlim, axes=FALSE)
+}
+par(mfrow=c(5,5), mex = 0.01)
+plot = sapply(index, function(x) plot.digit(threes[x, ]))
+par(mfrow=c(1,1))
+```
+
+\subsection{(e)}
+The previous plot shows that increases in the first principal component (left to right) make the bottom tail of the three a bit longer, and perhaps a bit thicker, as well.
+
+The second principal component (top to bottom) seems to increase the thickness of the three, as well as making the threes more horizontally symmetric (except for a couple cases). 
+
+\subsection{(f)}
+```{r, warnings=FALSE}
+prop.var = pc$sdev^2 / sum(pc$sdev^2)
+
+plot(x = 1:length(prop.var), y=cumsum(prop.var),
+     main = "Proportion of Explained Variability vs. Number of Principal Components",
+     xlab="Number of Principal Components", ylab="Proportion of Variance")
+
+min(which(cumsum(prop.var) >= 0.5))
+min(which(cumsum(prop.var) >= 0.9))
+```
+We need 7 principal components to explain 50% of the variance, and 52 to explain 90%.
+
+\section{Problem 2}
+\subsection{(a)}
+```{r, warnings=FALSE}
+fossil = read.csv("fossil.csv")
+plot(strontium.ratio ~ age, data = fossil, main="Fossil Strontium Ratio versus Fossil Age", 
+     xlab="Fossil Age", ylab="Strontium Ratio")
+
+library(boot)
+cv.error = sapply(1:20, function(i) {
+  glmfit = glm(strontium.ratio ~ poly(age, degree=i), data=fossil)
+  cv.glm(fossil, glmfit, K=5)$delta[1] } )
+  
+plot(log(cv.error), xlab="Degree", type="o", ylab="Log-CV Error",
+     main="Log CV Error versus Polynomial Degree")
+degree.opt = which.min(cv.error); degree.opt
+
+fit.poly = glm(strontium.ratio ~ poly(age, degree = degree.opt), data=fossil)
+summary(fit.poly)
+```
+
+\subsection{(b)}
+```{r, warnings=FALSE}
+library(splines)
+cv.error = sapply(1:20, function(i) {
+  glmfit = glm(strontium.ratio ~ ns(age, df=i), data=fossil)
+  cv.glm(fossil, glmfit, K=5)$delta[1] } )
+
+plot(log(cv.error), xlab="Degrees of Freedom", type="o", ylab="Log-CV Error",
+     main="Log CV Error versus Degrees of Freedom")
+df.opt = which.min(cv.error); df.opt
+
+fit.ns = glm(strontium.ratio ~ ns(age, df=df.opt), data=fossil)
+summary(fit.ns)
+```
+
+\subsection{(c)}
+```{r, warnings=FALSE}
+strontium.ratio = fossil$strontium.ratio
+age = fossil$age
+cv.smoothspline = function(data,df) {
+  data.split = split(data, cut(data$age, 5))
+  
+  MSE = sapply(1:5, function(l){
+    train = do.call(rbind, data.split[-l])
+    test = data.split[[l]]
+    fit = smooth.spline(x=train$age, y=train$strontium.ratio, df=df)
+    mean((predict(fit, test$age,se=T)$y - test$strontium.ratio)^2)
+    })
+  mean(MSE)
+}
+CV = sapply(5:20, function(df) cv.smoothspline(fossil, df))
+plot(CV, xlab="Degrees of Freedom", ylab= "Cross Validated MSE")
+which.min(CV)
+
+fit.smooth = smooth.spline(age, strontium.ratio, df=which.min(CV))
+```
+
+\subsection{(d)}
+```{r, warnings=FALSE}
+library(bisoreg)
+span.opt = summary(loess.wrapper(age, strontium.ratio, 
+                                 span.vals = seq(.1, 1, by = 0.01), folds = 5))$pars$span
+
+fit.loess=loess(strontium.ratio~age, span = span.opt)
+summary(fit.loess)
+```
+
+\subsection{(e)}
+```{r, warnings=FALSE}
+ageRange=range(age)
+ageSeq = seq(from=ageRange[1],to=ageRange[2])
+predict.poly = predict(fit.poly, newdata = list(age=ageSeq),se=T)
+predict.ns = predict(fit.ns, newdata = list(age=ageSeq),se=T)
+predict.smooth = predict(fit.smooth, newdata = data.frame(age=ageSeq),se=T)
+predict.loess = predict(fit.loess, newdata = data.frame(age=ageSeq),se=T)
+
+plot(strontium.ratio ~ age, xlab="Age", ylab="Strontium Ratio", data=fossil)
+lines(ageSeq, predict.poly$fit, col="red")
+lines(ageSeq, predict.ns$fit, col="blue")
+lines(predict.smooth, col="green")
+lines(ageSeq, predict.loess$fit, col="purple")
+
+legend("bottomright", col=c('red','blue','green','purple'), lty=1, cex=0.4,
+       legend=c("polynomial", " natural cubic spline",'smoothing spline','loess'))
+```
+
+\section{Problem 3.}
+\subsection{(a)}
+```{r, warnings=FALSE}
+library(gam)
+income = read.csv('http://www-bcf.usc.edu/~gareth/ISL/Income2.csv')
+Income.LM = lm(Income ~ Education + Seniority, data=income)
+coefficients(Income.LM)
+f1 = with(income, Income.LM$coefficient[2]*Education-mean(Income.LM$coefficient[2]*Education))
+```
+
+\subsection{(b)}
+```{r, warnings=FALSE}
+z1 = income$Income - f1
+plot(income$Seniority, z1, xlab = "Seniority", ylab = "Partial Education Residuals",
+     main = "Smoothing Spline of Partial Education Residuals vs. Seniority")
+s2 = smooth.spline(income$Seniority, z1, cv=TRUE)
+lines(s2, lwd=2, col='blue')
+
+f2 = predict(s2,income$Seniority)$y
+f2 = f2 - mean(f2)
+```
+  
+\subsection{(c)}
+```{r, warnings=FALSE}
+z2 = income$Income - f2
+plot(income$Education, z2, xlab = "Education", ylab = "Partial Seniority Residuals",
+     main = "Smoothing Spline of Partial Seniority Residuals vs. Education")
+s1 = smooth.spline(income$Education, z2, cv=TRUE)
+lines(s1, lwd=2, col=' blue')
+```
+  
+\subsection{(d)}
+```{r, warnings=FALSE}
+niter = 0
+tol = 1E-4
+L2dist = Inf
+
+while (L2dist >= tol){
+    f1.old = f1
+    f2.old = f2
+
+    z1 = income$Income - f1
+    s2 = smooth.spline(income$Seniority,z1, cv=TRUE) 
+    f2 = predict(s2,income$Seniority)$y   - mean(predict(s2,income$Seniority)$y  )
+
+    z2 = income$Income - f2
+    s1 = smooth.spline(income$Education,z2, cv=TRUE) 
+    f1 = predict(s1, income$Education)$y - mean(predict(s1, income$Education)$y)
+    L2dist = sqrt(sum(((f1+f2) - (f1.old + f2.old))^2))
+    niter = niter + 1
+}
+cat("Convergence reached after ", niter, "iterations (tolerance=", tol, ")")
+```
+
+\subsection{(e)}
+```{r, warnings=FALSE}
+par(mfrow=c(2,2))
+EducationGrid = with(income, seq(min(Education), max(Education), len=20))
+SeniorityGrid = with(income, seq(min(Seniority), max(Seniority), len=20))
+griddf = with(income, expand.grid(Education=EducationGrid, Seniority=SeniorityGrid))
+
+pred <- function(grid){
+	(predict(s1,grid[,1])$y - mean(f1)) + (predict(s2,grid[,2])$y - mean(f2))
+}
+
+griddg <- matrix(pred(griddf), 20, 20)
+
+f1_hat = predict(s1, EducationGrid)$y - mean(predict(s1, EducationGrid)$y)
+f2_hat = predict(s2, SeniorityGrid)$y - mean(predict(s2, SeniorityGrid)$y)
+griddg = matrix(f1_hat + f2_hat, 20, 20)
+persp(EducationGrid, SeniorityGrid, griddg, phi=45, theta=45, d=2, main = "GAM", xlab='Education', ylab='Seniority')
+
+library(fields)
+fit = Tps(income[,2:3], income$Income)
+griddg1 = matrix(predict(fit, griddf), 20, 20)
+persp(EducationGrid, SeniorityGrid, griddg1, phi=45, theta=45, d=2, main = "Thin Plate Spline", xlab='Education', ylab='Seniority')
+
+#Loess
+loc.fit = loess(Income~Education+Seniority, data=income)
+griddg <- matrix(predict(loc.fit, griddf), 20, 20)
+persp(EducationGrid, SeniorityGrid, griddg, phi=45, theta=45, d=2, main = "Loess",
+      xlab='Education', ylab='Seniority')
+```
+
+The Backfit GAM is the most smooth fit, while the thin plate has the most amount of bumpiness.
